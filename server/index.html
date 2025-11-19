@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GradientGPT</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- 1. Variables & Reset --- */
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-input: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            --accent-glow: rgba(139, 92, 246, 0.5);
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* --- 2. Background Image (Abstract ML) --- */
+        .background-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* Fetching a cool, dark, abstract tech image from Unsplash */
+            background-image: url('https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=1974&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            opacity: 0.15; /* Keep it subtle */
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* --- 3. Main Layout --- */
+        #app-container {
+            width: 100%;
+            max-width: 900px; /* Professional width */
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background: rgba(15, 23, 42, 0.6); /* Semi-transparent backdrop */
+            backdrop-filter: blur(10px); /* Glassmorphism effect */
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* --- 4. Header --- */
+        #header {
+            padding: 20px 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent; /* Gradient text */
+            letter-spacing: -0.5px;
+        }
+
+        .status-badge {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            font-size: 12px;
+            font-weight: 500;
+            padding: 4px 8px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background-color: var(--success);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        /* --- 5. Chat Window --- */
+        #chat-window {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            scroll-behavior: smooth;
+        }
+
+        /* Scrollbar Styling */
+        #chat-window::-webkit-scrollbar {
+            width: 6px;
+        }
+        #chat-window::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 16px 20px;
+            border-radius: 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            animation: fadeIn 0.3s ease-out;
+            position: relative;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user {
+            align-self: flex-end;
+            background: var(--accent-gradient);
+            color: white;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .agent {
+            align-self: flex-start;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom-left-radius: 4px;
+        }
+
+        /* --- 6. Feedback & Download Chips --- */
+        .actions-row {
+            align-self: flex-start;
+            margin-left: 4px;
+            margin-top: -10px; /* Pull closer to message */
+            margin-bottom: 10px;
+            display: flex;
+            gap: 8px;
+            opacity: 0; /* Hidden by default, could animate in */
+            animation: fadeIn 0.5s ease-out 0.3s forwards;
+        }
+
+        .chip {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .chip:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            transform: translateY(-1px);
+        }
+
+        .chip.download {
+            border-color: var(--success);
+            color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .chip.download:hover {
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        /* --- 7. Input Area --- */
+        #input-area {
+            padding: 24px 30px;
+            /* background: rgba(15, 23, 42, 0.9); */ /* Optional distinct footer bg */
+        }
+
+        #chat-form {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        #chat-input {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid transparent;
+            padding: 16px 50px 16px 24px; /* Right padding for button */
+            border-radius: 30px;
+            color: var(--text-primary);
+            font-size: 16px;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        #chat-input:focus {
+            background: #1e293b;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+        }
+
+        #chat-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        #send-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: var(--accent-gradient);
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 2px 10px var(--accent-glow);
+        }
+
+        #send-btn:hover {
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        #send-btn:disabled {
+            background: var(--bg-input);
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: translateY(-50%) scale(1);
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            #app-container {
+                border: none;
+                border-radius: 0;
+            }
+            .message {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="background-overlay"></div>
+
+    <div id="app-container">
+        
+        <div id="header">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#grad1)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <defs>
+                    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#6366f1" />
+                        <stop offset="100%" style="stop-color:#a855f7" />
+                    </linearGradient>
+                </defs>
+                <path d="M12 2a10 10 0 0 0-9.94 10.55c.04.42.34.75.76.75h3.01c.42 0 .73-.34.76-.76A5.44 5.44 0 0 1 12 7a5.5 5.5 0 0 1 5.5 5.5c0 .42.34.76.76.76h3.01c.42 0 .73-.34.76-.76A10 10 0 0 0 12 2Z"/>
+                <path d="M12 15a5.5 5.5 0 0 1-5.5-5.5c0-.42-.34-.76-.76-.76H2.73c-.42 0-.73.34-.76.76A10 10 0 0 0 12 22a10 10 0 0 0 9.94-9.45c-.04-.42-.34-.75-.76-.75h-3.01c-.42 0-.73.34-.76.76A5.5 5.5 0 0 1 12 15Z"/>
+            </svg>
+            <h1>GradientGPT</h1>
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                <span>Online</span>
+            </div>
+        </div>
+
+        <div id="chat-window">
+            <div class="message agent">
+                Hello! I am GradientGPT, your Data Science SME.
+                <br><br>
+                I can explain concepts, generate study guides, and even write Python code for you. How can I help?
+            </div>
+        </div>
+
+        <div id="input-area">
+            <form id="chat-form">
+                <input id="chat-input" type="text" placeholder="Ask me anything about Data Science..." autocomplete="off">
+                <button type="submit" id="send-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12h14"></path>
+                        <path d="m12 5 7 7-7 7"></path>
+                    </svg>
+                </button>
+            </form>
+        </div>
+
+    </div>
+
+    <script>
+        // --- JAVASCRIPT LOGIC (UNCHANGED FUNCTIONALITY) ---
+        
+        const chatWindow = document.getElementById('chat-window');
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-btn');
+        
+        let threadId = sessionStorage.getItem('chat_thread_id');
+        if (!threadId) {
+            threadId = 'session_' + Math.random().toString(36).substring(2, 15);
+            sessionStorage.setItem('chat_thread_id', threadId);
+        }
+        console.log("Using Thread ID:", threadId);
+
+        // --- Handle form submission ---
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            addMessage(message, 'user');
+            chatInput.value = '';
+            chatInput.disabled = true;
+            sendBtn.disabled = true;
+            
+            // Add visual loading state
+            sendBtn.style.opacity = "0.5";
+            
+            await handleChatRequest(message);
+            
+            chatInput.disabled = false;
+            sendBtn.disabled = false;
+            sendBtn.style.opacity = "1";
+            chatInput.focus();
+        });
+
+        // --- Handle Chat Request ---
+        async function handleChatRequest(message) {
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        thread_id: threadId
+                    })
+                });
+
+                if (!response.ok) throw new Error('Network response was not ok');
+
+                const data = await response.json();
+                const agentReply = data.reply;
+                
+                try {
+                    const parsedReply = JSON.parse(agentReply);
+                    if (parsedReply.download_path && parsedReply.message) {
+                        addMessage(parsedReply.message, 'agent', parsedReply.download_path);
+                    } else {
+                        addMessage(agentReply, 'agent');
+                    }
+                } catch (e) {
+                    addMessage(agentReply, 'agent');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage('Sorry, something went wrong. Please try again.', 'agent');
+            }
+        }
+
+        // --- Add Message Function (With Styled Chips) ---
+        function addMessage(text, sender, downloadPath = null) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', sender);
+            messageElement.innerHTML = text.replace(/\n/g, '<br>'); // Simple line break formatting
+            chatWindow.appendChild(messageElement);
+
+            if (sender === 'agent') {
+                const actionsRow = document.createElement('div');
+                actionsRow.classList.add('actions-row');
+
+                // Feedback Buttons
+                const thumbsUp = createChip('👍', () => handleFeedbackClick('good', text, actionsRow));
+                const thumbsDown = createChip('👎', () => handleFeedbackClick('bad', text, actionsRow));
+                
+                actionsRow.appendChild(thumbsUp);
+                actionsRow.appendChild(thumbsDown);
+
+                // Download Button (if path exists)
+                if (downloadPath) {
+                    // Logic to get just the filename for display
+                    const filename = downloadPath.split('/').pop();
+                    const downloadChip = createChip(`📥 Download ${filename}`, () => triggerDownload(downloadPath));
+                    downloadChip.classList.add('download');
+                    actionsRow.appendChild(downloadChip);
+                }
+
+                chatWindow.appendChild(actionsRow);
+            }
+
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        // Helper to create the new styled chips
+        function createChip(text, onClick) {
+            const btn = document.createElement('button');
+            btn.classList.add('chip');
+            btn.textContent = text;
+            btn.onclick = onClick;
+            return btn;
+        }
+
+        // --- Handle Feedback ---
+        async function handleFeedbackClick(rating, agentResponse, container) {
+            // Visual disable
+            container.querySelectorAll('.chip').forEach(btn => {
+                if(!btn.classList.contains('download')) {
+                    btn.style.opacity = '0.5';
+                    btn.style.pointerEvents = 'none';
+                }
+            });
+            
+            let comment = "No comment provided.";
+            let newSource = null;
+
+            if (rating === 'bad') {
+                comment = prompt("Help us improve. What was wrong?", "");
+                if (comment === null) {
+                    // Re-enable if cancelled
+                    container.querySelectorAll('.chip').forEach(btn => {
+                        btn.style.opacity = '1';
+                        btn.style.pointerEvents = 'auto';
+                    });
+                    return;
+                }
+                const urlMatch = comment.match(/https?:\/\/[^\s]+/);
+                if (urlMatch) newSource = urlMatch[0];
+            }
+
+            const feedbackMessage = `Feedback: rating='${rating}', comment='${comment}', new_source='${newSource || 'None'}'`;
+            
+            const thanksMsg = document.createElement('div');
+            thanksMsg.textContent = "Thanks for your feedback!";
+            thanksMsg.style.fontSize = "12px";
+            thanksMsg.style.color = "#6366f1";
+            thanksMsg.style.marginLeft = "4px";
+            thanksMsg.style.marginTop = "5px";
+            container.parentNode.insertBefore(thanksMsg, container.nextSibling);
+
+            await handleChatRequest(feedbackMessage);
+        }
+
+        // --- Trigger Download ---
+        function triggerDownload(path) {
+            console.log("Triggering download for:", path);
+            const a = document.createElement('a');
+            a.href = path;
+            a.download = path.split('/').pop(); 
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>
