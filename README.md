@@ -23,7 +23,7 @@ The system employs a multi-agent architecture orchestrated by **LangGraph** (imp
 Here's a visual representation of the SME Agent's architecture:
 
 <!-- http://googleusercontent.com/image_generation_content/0 -->
-![1763487787047](image/final_report/1763487787047.png)
+![1763487787047](workflow.png)
 
 
 ### B. Orchestration Layer
